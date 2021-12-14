@@ -1,13 +1,13 @@
 # MetaCiircle
 
-<img src='./assets/readme/1.png' >
-<img src='./assets/readme/2.png' >
-<img src='./assets/readme/3.png' >
-<img src='./assets/readme/4.png' >
-<img src='./assets/readme/5.png' >
-<img src='./assets/readme/6.png' >
-<img src='./assets/readme/7.png' >
-<img src='./assets/readme/7.png' >
+<img src='./readmeAssets/1.png' >
+<img src='./readmeAssets/2.png' >
+<img src='./readmeAssets/3.png' >
+<img src='./readmeAssets/4.png' >
+<img src='./readmeAssets/5.png' >
+<img src='./readmeAssets/6.png' >
+<img src='./readmeAssets/7.png' >
+<img src='./readmeAssets/8.png' >
 
 ##Instalation:
 
