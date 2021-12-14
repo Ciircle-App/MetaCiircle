@@ -40,7 +40,7 @@ const Create = ({navigation}) => {
       const currentAddress = selectedAddress || accounts[0]
       setAddress(currentAddress)
     } catch (e) {
-      console.log(e)
+      showSnakError()
     }
   }
 
@@ -52,14 +52,12 @@ const Create = ({navigation}) => {
   }, [])
 
   const handleSubmit = async theIpfsHash => {
-    console.log('theIpfsHash...', theIpfsHash)
     if (
       name.length === 0 ||
       description.length === 0 ||
       price.length === 0
       // !theIpfsHash
     ) {
-      console.log('required....')
       setLoading(false)
       showSnakError("You can't create an empty NFT")
       return
@@ -88,13 +86,11 @@ const Create = ({navigation}) => {
         gas: 3000000,
       })
       const tokenId = res.events.Transfer.returnValues.tokenId
-      console.log('tokenId ===>', tokenId)
       const price_in_ither = web3.utils.toWei(price, 'ether')
       const listingPrice = await nftMarketContract.methods
         .getListingPrice()
         .call()
       const listing_price_in_ether = web3.utils.fromWei(listingPrice, 'ether')
-
       await nftMarketContract.methods
         .createMarketItem(createNFTAddress, Number(tokenId), price_in_ither)
         .send({
@@ -108,7 +104,6 @@ const Create = ({navigation}) => {
     } catch (error) {
       showSnakError(error.message)
       setLoading(false)
-      console.log('error ==>>>', error.message)
     }
   }
 
@@ -139,7 +134,6 @@ const Create = ({navigation}) => {
     })
       .then(response => response.json())
       .then(response => {
-        console.log(response)
         setLoading()
         if (response.IpfsHash) {
           uploadMetaData(response.IpfsHash)
@@ -177,7 +171,6 @@ const Create = ({navigation}) => {
     })
       .then(response => response.json())
       .then(response => {
-        console.log('response JSON md', response)
         setLoading()
         if (response.IpfsHash) {
           handleSubmit(response.IpfsHash)
@@ -233,11 +226,12 @@ const Create = ({navigation}) => {
       },
       response => {
         if (response.didCancel) {
-          console.log('User cancelled image picker')
+          __DEV__ && console.log('User cancelled image picker')
         } else if (response.error) {
-          console.log('ImagePicker Error: ', response.error)
+          __DEV__ && console.log('ImagePicker Error: ', response.error)
         } else if (response.customButton) {
-          console.log('User tapped custom button: ', response.customButton)
+          __DEV__ &&
+            console.log('User tapped custom button: ', response.customButton)
         } else {
           setImage(response.assets[0])
         }
