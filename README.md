@@ -1,6 +1,6 @@
 # MetaCiircle
 
-<img alt='MetaCiircle' src='./readmeAssets/1.png' />
+<img width='' alt='MetaCiircle' src='./readmeAssets/1.png' />
 <img alt='MetaCiircle' src='./readmeAssets/2.png' />
 <img alt='MetaCiircle' src='./readmeAssets/3.png' />
 <img alt='MetaCiircle' src='./readmeAssets/4.png' />
