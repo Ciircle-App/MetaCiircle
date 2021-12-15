@@ -49,9 +49,9 @@ const SendEther = ({navigation}) => {
     })
   }
 
-  const showSnakError = () => {
+  const showSnakError = error => {
     Snackbar.show({
-      text: 'Transaction Failed',
+      text: error || 'Transaction Failed',
       duration: Snackbar.LENGTH_SHORT,
       backgroundColor: '#FF5252',
     })
@@ -93,14 +93,13 @@ const SendEther = ({navigation}) => {
                 getBalance()
               })
               .catch(err => {
-                showSnakError()
+                showSnakError(err.message)
                 setTransactionLoader(false)
               })
           })
       } catch (error) {
-        showSnakError()
+        showSnakError(error.message)
         setTransactionLoader(false)
-        Alert.alert('Error 2', error.message)
       }
     } else {
       Alert.alert('Invalid Address', 'Please enter a valid address')

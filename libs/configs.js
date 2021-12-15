@@ -5,6 +5,7 @@ const givenProvider = Web3.givenProvider
 const provider_api_key = '7yAOt1e5QkczRwTDg_FG8rCo1GdLIolS'
 const provider_url = 'https://eth-mainnet.alchemyapi.io/v2/' + provider_api_key
 const provider = givenProvider || developmentPrivider
+console.log('provider_url', provider_url)
 const web3 = new Web3(new Web3.providers.HttpProvider(provider))
 
 const pinataApiKey = 'dbd74552fe3b4a8126be'

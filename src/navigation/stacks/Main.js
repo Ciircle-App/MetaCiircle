@@ -53,7 +53,7 @@ const Main = () => {
             <Icon name="person" color={color} size={23} />
           ),
         }}
-        name="Profile"
+        name="ProfileStack"
         component={ProfileStack}
       />
     </Tab.Navigator>

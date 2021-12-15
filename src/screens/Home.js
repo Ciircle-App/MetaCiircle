@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useState, useContext} from 'react'
 import {
   Text,
   SafeAreaView,
@@ -12,21 +12,24 @@ import {
 import NFTMarket from '../../build/contracts/NFTMarket.json'
 import CreateNFT from '../../build/contracts/CreateNFT.json'
 import {web3} from '../../libs/configs'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import ErrorView from '../components/common/ErrorView'
 import {TouchableOpacity} from 'react-native-gesture-handler'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import Snackbar from 'react-native-snackbar'
+import {AuthContext} from '../navigation/AuthProvider'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const eth_add = require('../../assets/eth_add.webp')
 const {height} = Dimensions.get('window')
 
 const Home = ({navigation}) => {
   const [balance, setBalance] = useState('')
+  const {currentAccount} = useContext(AuthContext)
   const [nftsData, setNft] = useState([])
-  const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [isBuying, setIsBuying] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   web3
@@ -34,9 +37,10 @@ const Home = ({navigation}) => {
   useEffect(() => {
     navigation.addListener('focus', () => {
       getNFTs(false)
+      getBalance()
     })
-    getBalance()
     getNFTs(true)
+    getBalance()
   }, [])
 
   const getNFTs = async isLoader => {
@@ -83,38 +87,46 @@ const Home = ({navigation}) => {
   }
 
   const buyNFT = async (tokenId, price) => {
+    setIsBuying(true)
     try {
       const the_price = web3.utils.toWei(price, 'ether')
       const netId = await web3.eth.net.getId()
       const createContractAddress = CreateNFT.networks[netId].address
       const contractAddress = NFTMarket.networks[netId].address
-      const nftCreate = new web3.eth.Contract(
-        CreateNFT.abi,
-        createContractAddress,
-      )
       const nftMarket = new web3.eth.Contract(NFTMarket.abi, contractAddress)
 
-      const tx = await nftMarket.methods
-        .createMarketSale(nftCreate, tokenId)
+      await nftMarket.methods
+        .createMarketSale(createContractAddress, tokenId)
         .send({
-          from: address,
+          from: await AsyncStorage.getItem('selectedAddress'),
           value: the_price,
+          gas: 3000000,
         })
-      await transaction.wait()
-      console.log(tx)
-      getNFTs(true)
+      showSnakBar()
     } catch (error) {
-      setError(true)
-      setErrorMessage(error.message)
+      showSnakError(error.message)
     }
+    setTimeout(() => setIsBuying(false), 0)
+  }
+
+  const showSnakBar = () => {
+    Snackbar.show({
+      text: 'Transaction Successful',
+      duration: Snackbar.LENGTH_SHORT,
+      backgroundColor: '#77ACF1',
+    })
+  }
+
+  const showSnakError = error => {
+    Snackbar.show({
+      text: error || 'Transaction Failed',
+      duration: Snackbar.LENGTH_SHORT,
+      backgroundColor: '#FF5252',
+    })
   }
 
   const getBalance = async () => {
-    const selectedAddress = await AsyncStorage.getItem('selectedAddress')
-    const the_accounts = await web3.eth.getAccounts()
-    const currentAddress = selectedAddress || the_accounts[0]
-    setAddress(currentAddress)
-    const balance = await web3.eth.getBalance(currentAddress)
+    const balance = await web3.eth.getBalance(currentAccount)
     setBalance(web3.utils.fromWei(balance, 'ether'))
   }
 
@@ -125,13 +137,18 @@ const Home = ({navigation}) => {
   } else {
     return (
       <SafeAreaView style={styles.container}>
-        <NFTDisplayer navigation={navigation} nftsData={nftsData} />
+        <NFTDisplayer
+          isBuying={isBuying}
+          navigation={navigation}
+          nftsData={nftsData}
+          buyNFT={buyNFT}
+        />
       </SafeAreaView>
     )
   }
 }
 
-const NFTDisplayer = ({nftsData, navigation}) => {
+const NFTDisplayer = ({nftsData, navigation, isBuying, buyNFT}) => {
   return (
     <FlatList
       contentContainerStyle={styles.listContainer}
@@ -150,12 +167,14 @@ const NFTDisplayer = ({nftsData, navigation}) => {
           </TouchableOpacity>
         </View>
       }
-      renderItem={({item}) => <NFTItem item={item} />}
+      renderItem={({item}) => (
+        <NFTItem item={item} isBuying={isBuying} buyNFT={buyNFT} />
+      )}
     />
   )
 }
 
-const NFTItem = ({item}) => {
+const NFTItem = ({item, isBuying, buyNFT}) => {
   return (
     <View style={nftStyles.itemContainer}>
       <Image style={nftStyles.image} source={{uri: item?.image}} />
@@ -168,13 +187,25 @@ const NFTItem = ({item}) => {
           </View>
         </View>
         <Text style={nftStyles.desc}>{item?.description}</Text>
+        <Text style={nftStyles.desc}>tokenId: {item?.tokenId}</Text>
+        <Text style={nftStyles.desc}>seller :{item?.seller}</Text>
+        <Text style={nftStyles.desc}>owner: {item?.owner}</Text>
       </View>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>
-            {' '}
-            Buy Now <Ionicons name="wallet" color="#fff" size={23} />
-          </Text>
+        <TouchableOpacity
+          disabled={isBuying}
+          style={styles.button}
+          onPress={() => {
+            buyNFT(item?.tokenId, item?.price)
+          }}>
+          {isBuying ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {' '}
+              Buy Now <Ionicons name="wallet" color="#fff" size={23} />
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

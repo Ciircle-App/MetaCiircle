@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useState, useContext} from 'react'
 import {
   Text,
   SafeAreaView,
@@ -12,33 +12,35 @@ import {
 import NFTMarket from '../../build/contracts/NFTMarket.json'
 import CreateNFT from '../../build/contracts/CreateNFT.json'
 import {web3} from '../../libs/configs'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import ErrorView from '../components/common/ErrorView'
 import {TouchableOpacity} from 'react-native-gesture-handler'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import {AuthContext} from '../navigation/AuthProvider'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const eth_add = require('../../assets/eth_add.webp')
-const eth_logo = require('../../assets/eth.png')
 const {height} = Dimensions.get('window')
 
 const Profile = ({navigation}) => {
+  const {currentAccount} = useContext(AuthContext)
   const [balance, setBalance] = useState('')
   const [nftsData, setNft] = useState([])
-  const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [asSeller, setAsSeller] = useState(false)
 
   useEffect(() => {
     navigation.addListener('focus', () => {
-      getNFTs(false)
+      getBalance()
+      getNFTs(false, currentAccount)
     })
     getBalance()
-    getNFTs(true)
+    getNFTs(true, currentAccount)
   }, [])
 
-  const getNFTs = async isLoader => {
+  const getNFTs = async (isLoader, isMyNFTs) => {
     setLoading(isLoader)
     try {
       const netId = await web3.eth.net.getId()
@@ -49,15 +51,21 @@ const Profile = ({navigation}) => {
         nftContractAddress,
       )
       const nftMarket = new web3.eth.Contract(NFTMarket.abi, contractAddress)
-      const the_nfts = await nftMarket.methods.fetchMyNFTs().call({
-        from: address,
-      })
+      let the_nfts
+      if (!isMyNFTs) {
+        the_nfts = await nftMarket.methods.fetchMyNFTs().call({
+          from: await AsyncStorage.getItem('selectedAddress'),
+        })
+      } else {
+        the_nfts = await nftMarket.methods.fetchItemsCreated().call({
+          from: await AsyncStorage.getItem('selectedAddress'),
+        })
+      }
       const nfts = await Promise.all(
         the_nfts.map(async nft => {
           const tokenURI = await nftContract.methods
             .tokenURI(nft.tokenId)
             .call()
-          console.log('tokenURI ===>', tokenURI)
           const meta = await fetch(tokenURI)
           const metaData = await meta.json()
           return {
@@ -75,7 +83,6 @@ const Profile = ({navigation}) => {
       setNft(nfts)
       setError(false)
     } catch (error) {
-      console.log(error)
       setError(true)
       setErrorMessage(error.message)
     }
@@ -85,35 +92,64 @@ const Profile = ({navigation}) => {
   }
 
   const getBalance = async () => {
-    const selectedAddress = await AsyncStorage.getItem('selectedAddress')
-    const the_accounts = await web3.eth.getAccounts()
-    const currentAddress = selectedAddress || the_accounts[0]
-    setAddress(currentAddress)
-    const balance = await web3.eth.getBalance(currentAddress)
+    const balance = await web3.eth.getBalance(currentAccount)
     setBalance(web3.utils.fromWei(balance, 'ether'))
   }
 
   if (loading) {
     return <Loader />
   } else if (error) {
-    return <ErrorView message={errorMessage} tryAgain={() => getNFTs(true)} />
+    return (
+      <>
+        <ProfileHeader navigation={navigation} />
+        <ErrorView message={errorMessage} tryAgain={() => getNFTs(true)} />
+      </>
+    )
   } else {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.address}>Address: {address}</Text>
-          <TouchableOpacity
-            style={styles.cog}
-            onPress={() => {
-              navigation.navigate('Settings')
-            }}>
-            <Ionicons color="#444" size={25} name="cog" />
-          </TouchableOpacity>
-        </View>
+        <ProfileHeader
+          navigation={navigation}
+          address={currentAccount}
+          asSeller={asSeller}
+          setAsSeller={setAsSeller}
+          getNFTs={getNFTs}
+        />
         <NFTDisplayer navigation={navigation} nftsData={nftsData} />
       </SafeAreaView>
     )
   }
+}
+
+const ProfileHeader = ({
+  navigation,
+  address,
+  asSeller,
+  setAsSeller,
+  getNFTs,
+}) => {
+  return (
+    <>
+      <Text
+        style={styles.address}
+        onPress={() => {
+          getNFTs(true, !asSeller)
+          setAsSeller(!asSeller)
+        }}>
+        {asSeller ? 'As Seller' : 'As Owner'}
+      </Text>
+      <View style={styles.header}>
+        <Text style={styles.address}>Address: {address || 'Not Found'}</Text>
+        <TouchableOpacity
+          style={styles.cog}
+          onPress={() => {
+            navigation.navigate('Settings')
+          }}>
+          <Ionicons color="#444" size={25} name="cog" />
+        </TouchableOpacity>
+      </View>
+    </>
+  )
 }
 
 const NFTDisplayer = ({nftsData, navigation}) => {
@@ -153,6 +189,9 @@ const NFTItem = ({item}) => {
           </View>
         </View>
         <Text style={nftStyles.desc}>{item?.description}</Text>
+        <Text style={nftStyles.desc}>tokenId: {item?.tokenId}</Text>
+        <Text style={nftStyles.desc}>seller :{item?.seller}</Text>
+        <Text style={nftStyles.desc}>owner: {item?.owner}</Text>
       </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button}>

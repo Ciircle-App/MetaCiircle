@@ -91,10 +91,13 @@ contract NFTMarket is ReentrancyGuard {
     {
         uint256 price = _marketItems[itemId].price;
         uint256 tokenId = _marketItems[itemId].tokenId;
+        address seller = _marketItems[itemId].seller;
         require(
             msg.value == price,
             'Please submit the asking price in order to complete the purchase'
         );
+        require(msg.sender != seller, 'The seller can not be the buyer');
+
         _marketItems[itemId].seller.transfer(msg.value);
         IERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
         _marketItems[itemId].owner = payable(msg.sender);
@@ -149,6 +152,7 @@ contract NFTMarket is ReentrancyGuard {
         uint256 totalItemCount = _itemIds.current();
         uint256 itemCount = 0;
         uint256 currentIndex = 0;
+        require(msg.sender != address(0), 'Please pass the your address');
 
         for (uint256 i = 0; i < totalItemCount; i++) {
             if (_marketItems[i + 1].seller == msg.sender) {
@@ -159,7 +163,7 @@ contract NFTMarket is ReentrancyGuard {
         MarketItem[] memory items = new MarketItem[](itemCount);
 
         for (uint256 i = 0; i < totalItemCount; i++) {
-            if (_marketItems[i + 1].seller == address(0)) {
+            if (_marketItems[i + 1].seller == msg.sender) {
                 uint256 currentId = _marketItems[i + 1].itemId;
                 MarketItem storage currentItem = _marketItems[currentId];
                 items[currentIndex] = currentItem;

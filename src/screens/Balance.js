@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useState, useContext} from 'react'
 import {
   Text,
   SafeAreaView,
@@ -15,12 +15,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import Snackbar from 'react-native-snackbar'
 import {web3} from '../../libs/configs'
 import ErrorView from '../components/common/ErrorView'
+import {AuthContext} from '../navigation/AuthProvider'
 
 const ethImage = require('../../assets/eth.png')
 
 const Balance = ({navigation}) => {
+  const {currentAccount, setCurrentAccount} = useContext(AuthContext)
   const [balance, setBalance] = useState(0)
-  const [account, setAccount] = useState('')
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -38,10 +39,8 @@ const Balance = ({navigation}) => {
     const selectedAddress = await AsyncStorage.getItem('selectedAddress')
     try {
       const the_accounts = await web3.eth.getAccounts()
-      const currentAddress = selectedAddress || the_accounts[0]
       const balance = await web3.eth.getBalance(selectedAddress || accounts[0])
       setAccounts(the_accounts)
-      setAccount(currentAddress)
       setBalance(web3.utils.fromWei(balance, 'ether'))
     } catch (error) {
       showSnakError()
@@ -61,7 +60,7 @@ const Balance = ({navigation}) => {
 
   const onAccountChange = async account => {
     const balance = await web3.eth.getBalance(account)
-    setAccount(account)
+    setCurrentAccount(account)
     AsyncStorage.setItem('selectedAddress', account)
     setBalance(web3.utils.fromWei(balance, 'ether'))
   }
@@ -81,7 +80,7 @@ const Balance = ({navigation}) => {
         <BalanceHeader balance={balance} />
         <SenderAndReceiver navigation={navigation} />
         <AccountDisplayer
-          account={account}
+          account={currentAccount}
           balance={balance}
           accounts={accounts}
           onAccountChange={onAccountChange}
